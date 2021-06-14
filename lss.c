@@ -13,7 +13,6 @@
 #include <grp.h>
 #include <time.h>
 
-#define _XOPEN_SOURCE 500
 
 static unsigned long total = 0;
 
@@ -84,6 +83,21 @@ void getLastModifiedTime(struct dirent **list, int index){
         printf("%s ", date);
 }
 
+void functionA(struct dirent *current_entry, DIR *current_dir){
+        current_dir = NULL;
+        current_entry = NULL;
+
+        current_dir = opendir(".");
+        current_entry = readdir(current_dir);
+
+        while (current_entry != NULL){
+                fputs(current_entry->d_name, stdout);
+                printf("\n");
+                current_entry = readdir(current_dir);
+        }
+
+}
+
 void functionL(struct dirent **list, int countOfNames){
 
         for (int index = 0; index < countOfNames; ++index) {
@@ -115,18 +129,12 @@ void functionR(struct dirent **list, int countOfNames){
                 puts(list[index]->d_name);
 }
 
-void functionS()
+void functionS(DIR *current_dir, struct dirent *current_entry)
 {
-	DIR *current_dir = NULL;
-        struct dirent *current_entry = NULL;
+	current_dir = NULL;
+        current_entry = NULL;
 
         current_dir = opendir(".");
-
-	if (current_dir == NULL)
-        {
-                fprintf(stderr, "%s %d: opendir() failed (%s)\n", __FILE__, __LINE__, strerror(errno));
-                exit(-1);
-        }
         current_entry = readdir(current_dir);
 
         while (current_entry != NULL)
@@ -136,15 +144,12 @@ void functionS()
                         lstat(current_entry->d_name, &st);
                         off_t size = st.st_size;
                         total = 0;
-			if (ftw(current_entry->d_name, &sum, 1)){
-                                perror("ftw");
-                        }
+			if (ftw(current_entry->d_name, &sum, 1)) perror("ftw");
                         fputs(current_entry->d_name, stdout);
                         fprintf(stdout, " - %.1f MB\n", total/1000000.0);
                 }
                 current_entry = readdir(current_dir);
         }
-        closedir(current_dir);
 }
 
 void function(int opt)
@@ -171,6 +176,9 @@ void function(int opt)
         qsort(list, countOfNames, sizeof(*list), compareSize);
 
         switch(opt) {  
+                        case 'a':
+                                functionA(current_entry, current_dir);
+                                break;
                         case 'l':
                                 functionL(list, countOfNames);
                                 break;
@@ -178,7 +186,7 @@ void function(int opt)
                                 functionM(list, countOfNames);
                                 break;
 			case 's': 
-				functionS();
+				functionS(current_dir, current_entry);
                                 break;
 			case 'r':
 				functionR(list, countOfNames);
@@ -193,7 +201,7 @@ void function(int opt)
 int main(int argc, char *argv[]){
 
 	int opt;
-        opt = getopt(argc, argv, ":if:lmsr");
+        opt = getopt(argc, argv, ":if:almsr");
         function(opt);
 	
 	return 0;
